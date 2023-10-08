@@ -1,0 +1,84 @@
+name: Release TD-shim
+on: [create, workflow_dispatch]
+
+env:
+  RUST_TOOLCHAIN: nightly-2023-08-28
+  TOOLCHAIN_PROFILE: minimal
+  TD_SHIM_CODE_REV: 4da7dfcdd9faabd1bf9a7dc144c0206939b6d383
+
+jobs:
+  release:
+    if: github.event_name == 'create' && github.event.ref_type== 'tag'
+    name: Release
+    runs-on: ubuntu-20.04
+    timeout-minutes: 30
+
+    steps:
+      - name: install NASM
+        uses: ilammy/setup-nasm@v1
+
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@v1
+        with:
+          version: "10.0"
+          directory: ${{ runner.temp }}/llvm
+
+      - name: Checkout sources
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: ${{ env.TOOLCHAIN_PROFILE }}
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          override: true
+          components: rust-src
+
+      - name: Cache
+        uses: Swatinem/rust-cache@v1
+
+      - name: Run cargo install cargo-xbuild
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: cargo-xbuild
+
+      - name: Generate artifact and reference values
+        run: |
+          cd scripts/td-shim && make release
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.PUSH_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          draft: false
+          prerelease: true
+          allowUpdates: true
+
+      - name: Upload final-boot-kernel.bin
+        id: upload_release_final_boot_kernel_bin
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.PUSH_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: scripts/td-shim/td-shim/target/release/final-boot-kernel.bin
+          asset_name: final-boot-kernel.bin
+          asset_content_type: application/octet-stream
+
+      - name: Upload Sample Reference Value of MRTD
+        id: upload_release_sample_reference_value_mrtd
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.PUSH_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: scripts/td-shim/td-shim.reference-value.sample.json
+          asset_name: td-shim.reference-value.sample.json
+          asset_content_type: application/octet-stream

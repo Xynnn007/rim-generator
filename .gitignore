@@ -12,3 +12,7 @@ Cargo.lock
 
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
+
+scripts/td-shim/td-shim
+scripts/td-shim/.td-shim
+scripts/td-shim/td-shim.reference-value.sample.json
