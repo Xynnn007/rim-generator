@@ -51,34 +51,8 @@ jobs:
 
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.PUSH_TOKEN }}
+        uses: ncipollo/release-action@v1
         with:
-          tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
-          draft: false
-          prerelease: true
+          token: ${{ secrets.PUSH_TOKEN }}
+          artifacts: "scripts/td-shim/td-shim/target/release/final-boot-kernel.bin,scripts/td-shim/td-shim.reference-value.sample.json"
           allowUpdates: true
-
-      - name: Upload final-boot-kernel.bin
-        id: upload_release_final_boot_kernel_bin
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.PUSH_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: scripts/td-shim/td-shim/target/release/final-boot-kernel.bin
-          asset_name: final-boot-kernel.bin
-          asset_content_type: application/octet-stream
-
-      - name: Upload Sample Reference Value of MRTD
-        id: upload_release_sample_reference_value_mrtd
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.PUSH_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: scripts/td-shim/td-shim.reference-value.sample.json
-          asset_name: td-shim.reference-value.sample.json
-          asset_content_type: application/octet-stream
