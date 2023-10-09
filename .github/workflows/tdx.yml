@@ -1,5 +1,11 @@
-name: Release TDX guest image
-on: create
+name: Release TD-shim
+on: [create, workflow_dispatch]
+
+env:
+  RUST_TOOLCHAIN: nightly-2023-08-28
+  TOOLCHAIN_PROFILE: minimal
+  TD_SHIM_CODE_REV: 4da7dfcdd9faabd1bf9a7dc144c0206939b6d383
+  KATA_CODE_REV: 1ad87faaf
 
 jobs:
   release:
@@ -9,12 +15,38 @@ jobs:
     timeout-minutes: 30
 
     steps:
+      - name: install NASM
+        uses: ilammy/setup-nasm@v1
+
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@v1
+        with:
+          version: "10.0"
+          directory: ${{ runner.temp }}/llvm
+
       - name: Checkout sources
         uses: actions/checkout@v2
         with:
           submodules: recursive
 
-      - name: Generate artifact and reference values
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: ${{ env.TOOLCHAIN_PROFILE }}
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          override: true
+          components: rust-src
+
+      - name: Cache
+        uses: Swatinem/rust-cache@v1
+
+      - name: Run cargo install cargo-xbuild
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: cargo-xbuild
+
+      - name: Generate td-shim/guest-image/kernel and reference values
         run: |
           cd scripts/tdx && make release
 
@@ -23,5 +55,5 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           token: ${{ secrets.PUSH_TOKEN }}
-          artifacts: "scripts/tdx/kata-containers/tools/packaging/kata-deploy/local-build/build/rootfs-image-tdx/destdir/opt/kata/share/kata-containers/kata-ubuntu-latest-tdx.image,scripts/tdx/kata-containers-tdx.img.reference-value.sample.json"
+          artifacts: "scripts/tdx/td-shim/target/release/final-boot-kernel.bin,scripts/tdx/td-shim.reference-value.sample.json,scripts/tdx/kata-containers/tools/packaging/kata-deploy/local-build/build/rootfs-image-tdx/destdir/opt/kata/share/kata-containers/kata-ubuntu-latest-tdx.image,scripts/tdx/kata-containers-tdx.img.reference-value.sample.json,scripts/tdx/kata-containers/tools/packaging/kata-deploy/local-build/build/kernel-tdx-experimental/destdir/opt/kata/share/kata-containers/vmlinux-5.15-plus-TDX-114-tdx,scripts/tdx/vmlinux-tdx.reference-value.sample.json"
           allowUpdates: true

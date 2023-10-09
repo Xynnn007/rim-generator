@@ -1,28 +1,87 @@
-REPO_NAME := kata-containers
-GIT_REPO := https://github.com/kata-containers/${REPO_NAME}.git
-CODE_REV ?= 1ad87faaf
+TD_SHIM_REPO_NAME := td-shim
+TD_SHIM_GIT_REPO := https://github.com/confidential-containers/${TD_SHIM_REPO_NAME}.git
+TD_SHIM_CODE_REV ?=
+TD_SHIM_SAMPLE_REFERENCE_NAME := tdx.quote.body.mr_td
 
-ARTIFACT := ${REPO_NAME}/tools/packaging/kata-deploy/local-build/build/rootfs-image-tdx/destdir/opt/kata/share/kata-containers/kata-ubuntu-latest-tdx.image
-RAW_REFERENCE_VALUE_FILE := ${REPO_NAME}/tools/osbuilder/root_hash_tdx.txt
-SOURCE_CODE := .${REPO_NAME}
-SAMPLE_REFERENCE_VALUE_FILE := kata-containers-tdx.img.reference-value.sample.json
+TD_SHIM := ${TD_SHIM_REPO_NAME}/target/release/final-boot-kernel.bin
+TD_SHIM_MANIFEST := ${TD_SHIM_REPO_NAME}/td-shim-tools/src/bin/td-shim-tee-info-hash/sample_manifest.json
+TD_SHIM_RAW_REFERENCE_VALUE_FILE := ${TD_SHIM_REPO_NAME}/raw_reference
+TD_SHIM_SOURCE_CODE := .td-shim
+TD_SHIM_SAMPLE_REFERENCE_FILE := td-shim.reference-value.sample.json
 
-$(SOURCE_CODE):
-	git clone ${GIT_REPO} && \
-		cd ${REPO_NAME} && \
+KATA_REPO_NAME := kata-containers
+KATA_GIT_REPO := https://github.com/kata-containers/${KATA_REPO_NAME}.git
+
+KATA_SOURCE_CODE := .${KATA_REPO_NAME}
+
+GUEST_IMAGE := ${KATA_REPO_NAME}/tools/packaging/kata-deploy/local-build/build/rootfs-image-tdx/destdir/opt/kata/share/kata-containers/kata-ubuntu-latest-tdx.image
+GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE := ${KATA_REPO_NAME}/tools/osbuilder/root_hash.txt
+GUEST_IMAGE_SAMPLE_REFERENCE_VALUE_FILE := kata-containers-tdx.img.reference-value.sample.json
+
+KERNEL := ${KATA_REPO_NAME}/tools/packaging/kata-deploy/local-build/build/kernel-tdx-experimental/destdir/opt/kata/share/kata-containers/vmlinux-5.15-plus-TDX-114-tdx
+KERNEL_SAMPLE_REFERENCE_VALUE_FILE := vmlinux-tdx.reference-value.sample.json
+
+$(TD_SHIM_SOURCE_CODE):
+	git clone ${TD_SHIM_GIT_REPO} && cd ${TD_SHIM_REPO_NAME} && \
+    git submodule update --init --recursive
+	touch .td-shim
+
+$(TD_SHIM): $(TD_SHIM_SOURCE_CODE)
+	cd ${TD_SHIM_REPO_NAME} && \
+    make preparation && \
+    bash sh_script/build_final.sh boot_kernel
+
+$(TD_SHIM_RAW_REFERENCE_VALUE_FILE): $(TD_SHIM_SOURCE_CODE) $(TD_SHIM)
+	cd ${TD_SHIM_REPO_NAME} && \
+    cargo run -p td-shim-tools \
+      --bin td-shim-tee-info-hash \
+      --features tee \
+      -- --manifest ../${TD_SHIM_MANIFEST} \
+      --image ../${TD_SHIM} \
+      --out_bin tee_info.bin 2>../tmp && \
+	    cd ..
+	cat tmp | grep -A 1 "MR TD:" | tail -1 > ${TD_SHIM_RAW_REFERENCE_VALUE_FILE}
+
+$(TD_SHIM_SAMPLE_REFERENCE_VALUE_FILE): $(TD_SHIM_RAW_REFERENCE_VALUE_FILE)
+	python $(TD_SHIM_REPO_NAME).py $(TD_SHIM_RAW_REFERENCE_VALUE_FILE) $(TD_SHIM_SAMPLE_REFERENCE_NAME) $(TD_SHIM_SAMPLE_REFERENCE_FILE)
+
+td-shim: $(TD_SHIM_SAMPLE_REFERENCE_VALUE_FILE) $(TD_SHIM)
+
+$(KATA_SOURCE_CODE):
+	git clone ${KATA_GIT_REPO} && \
+		cd ${KATA_REPO_NAME} && \
 		git reset --hard ${CODE_REV}
-	touch ${SOURCE_CODE}
+	touch ${KATA_SOURCE_CODE}
 
-$(ARTIFACT) $(RAW_REFERENCE_VALUE_FILE): $(SOURCE_CODE)
-	cd ${REPO_NAME} && \
-    MEASURED_ROOTFS=yes $(MAKE) rootfs-image-tdx-tarball
+$(GUEST_IMAGE) $(GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE): $(KATA_SOURCE_CODE)
+	cd ${KATA_REPO_NAME} && \
+    USE_CACHE=no MEASURED_ROOTFS=yes $(MAKE) rootfs-image-tdx-tarball
 
-$(SAMPLE_REFERENCE_VALUE_FILE): $(RAW_REFERENCE_VALUE_FILE)
-	$(eval REF=$(shell sh -c "cat ${RAW_REFERENCE_VALUE_FILE} | grep Root" | awk '{print $$3}'))
-	python image_ref.py ${REF} $(SAMPLE_REFERENCE_VALUE_FILE)
+$(GUEST_IMAGE_SAMPLE_REFERENCE_VALUE_FILE): $(GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE)
+	$(eval REF=$(shell sh -c "cat ${GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE} | grep Root" | awk '{print $$3}'))
+	python guest-image.py ${REF} $(GUEST_IMAGE_SAMPLE_REFERENCE_VALUE_FILE)
 
-release: $(ARTIFACT) $(SAMPLE_REFERENCE_VALUE_FILE)
+$(KERNEL): $(KATA_SOURCE_CODE)
+	cd ${KATA_REPO_NAME} && \
+	USE_CACHE=no $(MAKE) kernel-tdx-experimental-tarball
+
+$(KERNEL_SAMPLE_REFERENCE_VALUE_FILE): $(KERNEL) $(TD_SHIM_SOURCE_CODE)
+	$(eval SIZE=$(shell sh -c "cat $(TD_SHIM_REPO_NAME)/devtools/td-layout-config/config_memory_linux.json | jq '.memory_regions[4].size'"))
+	cd ${TD_SHIM_REPO_NAME} && \
+		cargo run -p td-shim-tools \
+		--bin td-payload-reference-calculator \
+		--features calculator \
+		-- kernel -k $(KERNEL) -s ${SIZE} > ${TD_SHIM_REPO_NAME}/.tmp
+	python kernel.py $(shell cat ${TD_SHIM_REPO_NAME}/.tmp) $(KERNEL_SAMPLE_REFERENCE_VALUE_FILE)
+
+guest-image: $(GUEST_IMAGE) $(GUEST_IMAGE_SAMPLE_REFERENCE_VALUE_FILE)
+
+kernel: $(KERNEL) $(KERNEL_SAMPLE_REFERENCE_VALUE_FILE)
+
+release: td-shim guest-image kernel
 	@echo "Build done!"
 
 clean:
-	rm -rf $(SOURCE_CODE) $(SAMPLE_REFERENCE_VALUE_FILE) $(REPO_NAME)
+	rm -rf $(TD_SHIM_SOURCE_CODE) $(TD_SHIM_SAMPLE_REFERENCE_VALUE_FILE) \
+		$(TD_SHIM_REPO_NAME) $(KATA_SOURCE_CODE) $(GUEST_IMAGE_SAMPLE_REFERENCE_VALUE_FILE) \
+		$(KATA_REPO_NAME) $(GUEST_IMAGE) 
