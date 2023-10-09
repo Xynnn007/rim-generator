@@ -16,3 +16,9 @@ Cargo.lock
 scripts/td-shim/td-shim
 scripts/td-shim/.td-shim
 scripts/td-shim/td-shim.reference-value.sample.json
+
+scripts/tdx/.kata-containers
+scripts/tdx/kata-containers
+scripts/tdx/kata-containers-tdx.img.reference-value.sample.json
+
+scripts/__pycache__
