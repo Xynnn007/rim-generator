@@ -55,5 +55,5 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           token: ${{ secrets.PUSH_TOKEN }}
-          artifacts: "scripts/tdx/td-shim/target/release/final-boot-kernel.bin,scripts/tdx/td-shim.reference-value.sample.json,scripts/tdx/kata-containers/tools/packaging/kata-deploy/local-build/build/rootfs-image-tdx/destdir/opt/kata/share/kata-containers/kata-ubuntu-latest-tdx.image,scripts/tdx/kata-containers-tdx.img.reference-value.sample.json,scripts/tdx/kata-containers/tools/packaging/kata-deploy/local-build/build/kernel-tdx-experimental/destdir/opt/kata/share/kata-containers/vmlinux-5.15-plus-TDX-114-tdx,scripts/tdx/vmlinux-tdx.reference-value.sample.json"
+          artifacts: "scripts/tdx/final-boot-kernel.bin,scripts/tdx/td-shim.reference-value.sample.json,scripts/tdx/kata-ubuntu-tdx.image,scripts/tdx/kata-ubuntu-tdx.image.reference-value.sample.json,scripts/tdx/bzImage-tdx,scripts/tdx/bzImage-tdx.reference-value.sample.json"
           allowUpdates: true

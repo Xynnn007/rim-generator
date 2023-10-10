@@ -3,7 +3,7 @@ TD_SHIM_GIT_REPO := https://github.com/confidential-containers/${TD_SHIM_REPO_NA
 TD_SHIM_CODE_REV ?=
 TD_SHIM_SAMPLE_REFERENCE_NAME := tdx.quote.body.mr_td
 
-TD_SHIM := ${TD_SHIM_REPO_NAME}/target/release/final-boot-kernel.bin
+TD_SHIM := final-boot-kernel.bin
 TD_SHIM_MANIFEST := ${TD_SHIM_REPO_NAME}/td-shim-tools/src/bin/td-shim-tee-info-hash/sample_manifest.json
 TD_SHIM_RAW_REFERENCE_VALUE_FILE := ${TD_SHIM_REPO_NAME}/raw_reference
 TD_SHIM_SOURCE_CODE := .td-shim
@@ -11,15 +11,20 @@ TD_SHIM_SAMPLE_REFERENCE_FILE := td-shim.reference-value.sample.json
 
 KATA_REPO_NAME := kata-containers
 KATA_GIT_REPO := https://github.com/kata-containers/${KATA_REPO_NAME}.git
+KATA_CODE_REV =
+
+ifndef KATA_CODE_REV
+	KATA_CODE_REV = 1ad87faaf
+endif
 
 KATA_SOURCE_CODE := .${KATA_REPO_NAME}
 
-GUEST_IMAGE := ${KATA_REPO_NAME}/tools/packaging/kata-deploy/local-build/build/rootfs-image-tdx/destdir/opt/kata/share/kata-containers/kata-ubuntu-latest-tdx.image
+GUEST_IMAGE := kata-ubuntu-tdx.image
 GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE := ${KATA_REPO_NAME}/tools/osbuilder/root_hash.txt
-GUEST_IMAGE_SAMPLE_REFERENCE_VALUE_FILE := kata-containers-tdx.img.reference-value.sample.json
+GUEST_IMAGE_SAMPLE_REFERENCE_VALUE_FILE := kata-ubuntu-tdx.image.reference-value.sample.json
 
-KERNEL := ${KATA_REPO_NAME}/tools/packaging/kata-deploy/local-build/build/kernel-tdx-experimental/destdir/opt/kata/share/kata-containers/vmlinux-5.15-plus-TDX-114-tdx
-KERNEL_SAMPLE_REFERENCE_VALUE_FILE := vmlinux-tdx.reference-value.sample.json
+KERNEL := bzImage-tdx
+KERNEL_SAMPLE_REFERENCE_VALUE_FILE := bzImage-tdx.reference-value.sample.json
 
 $(TD_SHIM_SOURCE_CODE):
 	git clone ${TD_SHIM_GIT_REPO} && cd ${TD_SHIM_REPO_NAME} && \
@@ -30,6 +35,7 @@ $(TD_SHIM): $(TD_SHIM_SOURCE_CODE)
 	cd ${TD_SHIM_REPO_NAME} && \
     make preparation && \
     bash sh_script/build_final.sh boot_kernel
+	mv ${TD_SHIM_REPO_NAME}/target/release/final-boot-kernel.bin $(TD_SHIM)
 
 $(TD_SHIM_RAW_REFERENCE_VALUE_FILE): $(TD_SHIM_SOURCE_CODE) $(TD_SHIM)
 	cd ${TD_SHIM_REPO_NAME} && \
@@ -50,12 +56,13 @@ td-shim: $(TD_SHIM_SAMPLE_REFERENCE_VALUE_FILE) $(TD_SHIM)
 $(KATA_SOURCE_CODE):
 	git clone ${KATA_GIT_REPO} && \
 		cd ${KATA_REPO_NAME} && \
-		git reset --hard ${CODE_REV}
+		git reset --hard ${KATA_CODE_REV}
 	touch ${KATA_SOURCE_CODE}
 
 $(GUEST_IMAGE) $(GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE): $(KATA_SOURCE_CODE)
 	cd ${KATA_REPO_NAME} && \
     USE_CACHE=no MEASURED_ROOTFS=yes $(MAKE) rootfs-image-tdx-tarball
+	mv ${KATA_REPO_NAME}/tools/packaging/kata-deploy/local-build/build/rootfs-image-tdx/destdir/opt/kata/share/kata-containers/kata-ubuntu-latest-tdx.image kata-ubuntu-tdx.image
 
 $(GUEST_IMAGE_SAMPLE_REFERENCE_VALUE_FILE): $(GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE)
 	$(eval REF=$(shell sh -c "cat ${GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE} | grep Root" | awk '{print $$3}'))
@@ -64,15 +71,13 @@ $(GUEST_IMAGE_SAMPLE_REFERENCE_VALUE_FILE): $(GUEST_IMAGE_RAW_REFERENCE_VALUE_FI
 $(KERNEL): $(KATA_SOURCE_CODE)
 	cd ${KATA_REPO_NAME} && \
 	USE_CACHE=no $(MAKE) kernel-tdx-experimental-tarball
+	$(eval KERNEL_VERSION=$(shell sh -c "yq read -X $(KATA_REPO_NAME)/versions.yaml assets.kernel-tdx-experimental.version"))
+	$(eval KERNEL_CONFIG_VERSION=$(shell cat $(KATA_REPO_NAME)/tools/packaging/kernel/kata_config_version))
+	mv ${KATA_REPO_NAME}/tools/packaging/kata-deploy/local-build/build/kernel-tdx-experimental/destdir/opt/kata/share/kata-containers/vmlinuz-${KERNEL_VERSION}-${KERNEL_CONFIG_VERSION}-tdx $(KERNEL)
 
 $(KERNEL_SAMPLE_REFERENCE_VALUE_FILE): $(KERNEL) $(TD_SHIM_SOURCE_CODE)
 	$(eval SIZE=$(shell sh -c "cat $(TD_SHIM_REPO_NAME)/devtools/td-layout-config/config_memory_linux.json | jq '.memory_regions[4].size'"))
-	cd ${TD_SHIM_REPO_NAME} && \
-		cargo run -p td-shim-tools \
-		--bin td-payload-reference-calculator \
-		--features calculator \
-		-- kernel -k $(KERNEL) -s ${SIZE} > ${TD_SHIM_REPO_NAME}/.tmp
-	python kernel.py $(shell cat ${TD_SHIM_REPO_NAME}/.tmp) $(KERNEL_SAMPLE_REFERENCE_VALUE_FILE)
+	python kernel.py $(KERNEL) ${SIZE} $(KERNEL_SAMPLE_REFERENCE_VALUE_FILE)
 
 guest-image: $(GUEST_IMAGE) $(GUEST_IMAGE_SAMPLE_REFERENCE_VALUE_FILE)
 

@@ -19,5 +19,7 @@ scripts/tdx/td-shim.reference-value.sample.json
 scripts/tdx/.kata-containers
 scripts/tdx/kata-containers
 scripts/tdx/kata-containers-tdx.img.reference-value.sample.json
+scripts/tdx/vmlinux-tdx.reference-value.sample.json
+scripts/tdx/bzImage-tdx
 
 scripts/__pycache__
