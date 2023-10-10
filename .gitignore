@@ -18,7 +18,8 @@ scripts/tdx/.td-shim
 scripts/tdx/td-shim.reference-value.sample.json
 scripts/tdx/.kata-containers
 scripts/tdx/kata-containers
-scripts/tdx/kata-containers-tdx.img.reference-value.sample.json
+scripts/tdx/kata-ubuntu-tdx.image.reference-value.sample.json
+scripts/tdx/kata-ubuntu-tdx.image
 scripts/tdx/vmlinux-tdx.reference-value.sample.json
 scripts/tdx/bzImage-tdx
 

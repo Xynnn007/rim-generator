@@ -16,7 +16,7 @@ KATA_CODE_REV ?= 1ad87faaf
 KATA_SOURCE_CODE := .${KATA_REPO_NAME}
 
 GUEST_IMAGE := kata-ubuntu-tdx.image
-GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE := ${KATA_REPO_NAME}/tools/osbuilder/root_hash.txt
+GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE := ${KATA_REPO_NAME}/tools/osbuilder/root_hash_tdx.txt
 GUEST_IMAGE_SAMPLE_REFERENCE_VALUE_FILE := kata-ubuntu-tdx.image.reference-value.sample.json
 
 KERNEL := bzImage-tdx
@@ -56,21 +56,17 @@ $(KATA_SOURCE_CODE):
 		git reset --hard ${KATA_CODE_REV}
 	touch ${KATA_SOURCE_CODE}
 
-$(GUEST_IMAGE) $(GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE): $(KATA_SOURCE_CODE)
+$(GUEST_IMAGE) $(GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE) $(KERNEL): $(KATA_SOURCE_CODE)
 	cd ${KATA_REPO_NAME} && \
     USE_CACHE=no MEASURED_ROOTFS=yes $(MAKE) rootfs-image-tdx-tarball
-	mv ${KATA_REPO_NAME}/tools/packaging/kata-deploy/local-build/build/rootfs-image-tdx/destdir/opt/kata/share/kata-containers/kata-ubuntu-latest-tdx.image kata-ubuntu-tdx.image
+	mv ${KATA_REPO_NAME}/tools/packaging/kata-deploy/local-build/build/rootfs-image-tdx/destdir/opt/kata/share/kata-containers/kata-ubuntu-latest-tdx.image $(GUEST_IMAGE)
+	$(eval KERNEL_VERSION=$(shell sh -c "yq read -X $(KATA_REPO_NAME)/versions.yaml assets.kernel-tdx-experimental.version"))
+	$(eval KERNEL_CONFIG_VERSION=$(shell cat $(KATA_REPO_NAME)/tools/packaging/kernel/kata_config_version))
+	mv ${KATA_REPO_NAME}/tools/packaging/kata-deploy/local-build/build/kernel-tdx-experimental/destdir/opt/kata/share/kata-containers/vmlinuz-${KERNEL_VERSION}-${KERNEL_CONFIG_VERSION}-tdx $(KERNEL)
 
 $(GUEST_IMAGE_SAMPLE_REFERENCE_VALUE_FILE): $(GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE)
 	$(eval REF=$(shell sh -c "cat ${GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE} | grep Root" | awk '{print $$3}'))
 	python guest-image.py ${REF} $(GUEST_IMAGE_SAMPLE_REFERENCE_VALUE_FILE)
-
-$(KERNEL): $(KATA_SOURCE_CODE)
-	cd ${KATA_REPO_NAME} && \
-	USE_CACHE=no $(MAKE) kernel-tdx-experimental-tarball
-	$(eval KERNEL_VERSION=$(shell sh -c "yq read -X $(KATA_REPO_NAME)/versions.yaml assets.kernel-tdx-experimental.version"))
-	$(eval KERNEL_CONFIG_VERSION=$(shell cat $(KATA_REPO_NAME)/tools/packaging/kernel/kata_config_version))
-	mv ${KATA_REPO_NAME}/tools/packaging/kata-deploy/local-build/build/kernel-tdx-experimental/destdir/opt/kata/share/kata-containers/vmlinuz-${KERNEL_VERSION}-${KERNEL_CONFIG_VERSION}-tdx $(KERNEL)
 
 $(KERNEL_SAMPLE_REFERENCE_VALUE_FILE): $(KERNEL) $(TD_SHIM_SOURCE_CODE)
 	$(eval SIZE=$(shell sh -c "cat $(TD_SHIM_REPO_NAME)/devtools/td-layout-config/config_memory_linux.json | jq '.memory_regions[4].size'"))
