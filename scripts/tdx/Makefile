@@ -1,6 +1,6 @@
 TD_SHIM_REPO_NAME := td-shim
 TD_SHIM_GIT_REPO := https://github.com/confidential-containers/${TD_SHIM_REPO_NAME}.git
-TD_SHIM_CODE_REV ?=
+TD_SHIM_CODE_REV ?= 4da7dfcdd9faabd1bf9a7dc144c0206939b6d383
 TD_SHIM_SAMPLE_REFERENCE_NAME := tdx.quote.body.mr_td
 
 TD_SHIM := final-boot-kernel.bin
@@ -11,11 +11,7 @@ TD_SHIM_SAMPLE_REFERENCE_FILE := td-shim.reference-value.sample.json
 
 KATA_REPO_NAME := kata-containers
 KATA_GIT_REPO := https://github.com/kata-containers/${KATA_REPO_NAME}.git
-KATA_CODE_REV =
-
-ifndef KATA_CODE_REV
-	KATA_CODE_REV = 1ad87faaf
-endif
+KATA_CODE_REV ?= 1ad87faaf
 
 KATA_SOURCE_CODE := .${KATA_REPO_NAME}
 
@@ -28,6 +24,7 @@ KERNEL_SAMPLE_REFERENCE_VALUE_FILE := bzImage-tdx.reference-value.sample.json
 
 $(TD_SHIM_SOURCE_CODE):
 	git clone ${TD_SHIM_GIT_REPO} && cd ${TD_SHIM_REPO_NAME} && \
+	git reset --hard ${TD_SHIM_CODE_REV} && \
     git submodule update --init --recursive
 	touch .td-shim
 
