@@ -1,4 +1,4 @@
-name: Release TD-shim
+name: Release TDX components
 on: [create, workflow_dispatch]
 
 env:
