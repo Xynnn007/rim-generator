@@ -20,7 +20,7 @@ scripts/tdx/.kata-containers
 scripts/tdx/kata-containers
 scripts/tdx/kata-ubuntu-tdx.image.reference-value.sample.json
 scripts/tdx/kata-ubuntu-tdx.image
-scripts/tdx/vmlinux-tdx.reference-value.sample.json
+scripts/tdx/bzImage-tdx.reference-value.sample.json
 scripts/tdx/bzImage-tdx
 
 scripts/__pycache__

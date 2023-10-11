@@ -62,6 +62,7 @@ $(GUEST_IMAGE) $(GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE) $(KERNEL): $(KATA_SOURCE_
 	mv ${KATA_REPO_NAME}/tools/packaging/kata-deploy/local-build/build/rootfs-image-tdx/destdir/opt/kata/share/kata-containers/kata-ubuntu-latest-tdx.image $(GUEST_IMAGE)
 	$(eval KERNEL_VERSION=$(shell sh -c "yq read $(KATA_REPO_NAME)/versions.yaml assets.kernel-tdx-experimental.version"))
 	$(eval KERNEL_CONFIG_VERSION=$(shell cat $(KATA_REPO_NAME)/tools/packaging/kernel/kata_config_version))
+	@echo Built KERNEL_VERSION = ${KERNEL_VERSION}, KERNEL_CONFIG_VERSION = ${KERNEL_CONFIG_VERSION}
 	mv ${KATA_REPO_NAME}/tools/packaging/kata-deploy/local-build/build/kernel-tdx-experimental/destdir/opt/kata/share/kata-containers/vmlinuz-${KERNEL_VERSION}-${KERNEL_CONFIG_VERSION}-tdx $(KERNEL)
 
 $(GUEST_IMAGE_SAMPLE_REFERENCE_VALUE_FILE): $(GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE)
@@ -82,4 +83,5 @@ release: td-shim guest-image kernel
 clean:
 	rm -rf $(TD_SHIM_SOURCE_CODE) $(TD_SHIM_SAMPLE_REFERENCE_VALUE_FILE) \
 		$(TD_SHIM_REPO_NAME) $(KATA_SOURCE_CODE) $(GUEST_IMAGE_SAMPLE_REFERENCE_VALUE_FILE) \
-		$(KATA_REPO_NAME) $(GUEST_IMAGE) 
+		$(KATA_REPO_NAME) $(GUEST_IMAGE) \
+		$(KERNEL) $(KERNEL_SAMPLE_REFERENCE_VALUE_FILE)
