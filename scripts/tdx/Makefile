@@ -60,6 +60,7 @@ $(GUEST_IMAGE) $(GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE) $(KERNEL): $(KATA_SOURCE_
 	cd ${KATA_REPO_NAME} && \
     USE_CACHE=no MEASURED_ROOTFS=yes $(MAKE) rootfs-image-tdx-tarball
 	mv ${KATA_REPO_NAME}/tools/packaging/kata-deploy/local-build/build/rootfs-image-tdx/destdir/opt/kata/share/kata-containers/kata-ubuntu-latest-tdx.image $(GUEST_IMAGE)
+	bash ${KATA_REPO_NAME}/ci/install_yq.sh
 	$(eval KERNEL_VERSION=$(shell sh -c "yq read $(KATA_REPO_NAME)/versions.yaml assets.kernel-tdx-experimental.version"))
 	$(eval KERNEL_CONFIG_VERSION=$(shell cat $(KATA_REPO_NAME)/tools/packaging/kernel/kata_config_version))
 	@echo Built KERNEL_VERSION = ${KERNEL_VERSION}, KERNEL_CONFIG_VERSION = ${KERNEL_CONFIG_VERSION}
