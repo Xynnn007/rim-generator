@@ -62,7 +62,7 @@ $(GUEST_IMAGE) $(GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE) $(KERNEL): $(KATA_SOURCE_
 	mv ${KATA_REPO_NAME}/tools/packaging/kata-deploy/local-build/build/rootfs-image-tdx/destdir/opt/kata/share/kata-containers/kata-ubuntu-latest-tdx.image $(GUEST_IMAGE)
 	kernel_config_version=$(shell cat $(KATA_REPO_NAME)/tools/packaging/kernel/kata_config_version); \
 	kernel_version=$(shell INSTALL_IN_GOPATH=false $(KATA_REPO_NAME)/ci/install_yq.sh && yq r $(KATA_REPO_NAME)/versions.yaml assets.kernel-tdx-experimental.version); \
-	mv ${KATA_REPO_NAME}/tools/packaging/kata-deploy/local-build/build/kernel-tdx-experimental/destdir/opt/kata/share/kata-containers/vmlinuz-$$kernel_version-$$kernel_config_version-tdx $(KERNEL)
+	cp ${KATA_REPO_NAME}/tools/packaging/kata-deploy/local-build/build/kernel-tdx-experimental/destdir/opt/kata/share/kata-containers/vmlinuz-$$kernel_version-$$kernel_config_version-tdx $(KERNEL)
 
 $(GUEST_IMAGE_SAMPLE_REFERENCE_VALUE_FILE): $(GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE)
 	$(eval REF=$(shell sh -c "cat ${GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE} | grep Root" | awk '{print $$3}'))
