@@ -1,13 +1,15 @@
+ARTIFACT_DIR := destdir
+
 TD_SHIM_REPO_NAME := td-shim
 TD_SHIM_GIT_REPO := https://github.com/confidential-containers/${TD_SHIM_REPO_NAME}.git
 TD_SHIM_CODE_REV ?= 4da7dfcdd9faabd1bf9a7dc144c0206939b6d383
 TD_SHIM_SAMPLE_REFERENCE_NAME := tdx.quote.body.mr_td
 
-TD_SHIM := final-boot-kernel.bin
+TD_SHIM := ${ARTIFACT_DIR}/final-boot-kernel.bin
 TD_SHIM_MANIFEST := ${TD_SHIM_REPO_NAME}/td-shim-tools/src/bin/td-shim-tee-info-hash/sample_manifest.json
 TD_SHIM_RAW_REFERENCE_VALUE_FILE := ${TD_SHIM_REPO_NAME}/raw_reference
 TD_SHIM_SOURCE_CODE := .td-shim
-TD_SHIM_SAMPLE_REFERENCE_FILE := td-shim.reference-value.sample.json
+TD_SHIM_SAMPLE_REFERENCE_VALUE_FILE := ${ARTIFACT_DIR}/td-shim.reference-value.sample.json
 
 KATA_REPO_NAME := kata-containers
 KATA_GIT_REPO := https://github.com/kata-containers/${KATA_REPO_NAME}.git
@@ -15,12 +17,12 @@ KATA_CODE_REV ?= 1ad87faaf
 
 KATA_SOURCE_CODE := .${KATA_REPO_NAME}
 
-GUEST_IMAGE := kata-ubuntu-tdx.image
+GUEST_IMAGE := ${ARTIFACT_DIR}/kata-ubuntu-tdx.image
 GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE := ${KATA_REPO_NAME}/tools/osbuilder/root_hash_tdx.txt
-GUEST_IMAGE_SAMPLE_REFERENCE_VALUE_FILE := kata-ubuntu-tdx.image.reference-value.sample.json
+GUEST_IMAGE_SAMPLE_REFERENCE_VALUE_FILE := ${ARTIFACT_DIR}/kata-ubuntu-tdx.image.reference-value.sample.json
 
-KERNEL := bzImage-tdx
-KERNEL_SAMPLE_REFERENCE_VALUE_FILE := bzImage-tdx.reference-value.sample.json
+KERNEL := ${ARTIFACT_DIR}/bzImage-tdx
+KERNEL_SAMPLE_REFERENCE_VALUE_FILE := ${ARTIFACT_DIR}/bzImage-tdx.reference-value.sample.json
 
 $(TD_SHIM_SOURCE_CODE):
 	git clone ${TD_SHIM_GIT_REPO} && cd ${TD_SHIM_REPO_NAME} && \
@@ -46,7 +48,7 @@ $(TD_SHIM_RAW_REFERENCE_VALUE_FILE): $(TD_SHIM_SOURCE_CODE) $(TD_SHIM)
 	cat tmp | grep -A 1 "MR TD:" | tail -1 > ${TD_SHIM_RAW_REFERENCE_VALUE_FILE}
 
 $(TD_SHIM_SAMPLE_REFERENCE_VALUE_FILE): $(TD_SHIM_RAW_REFERENCE_VALUE_FILE)
-	python $(TD_SHIM_REPO_NAME).py $(TD_SHIM_RAW_REFERENCE_VALUE_FILE) $(TD_SHIM_SAMPLE_REFERENCE_NAME) $(TD_SHIM_SAMPLE_REFERENCE_FILE)
+	python $(TD_SHIM_REPO_NAME).py $(TD_SHIM_RAW_REFERENCE_VALUE_FILE) $(TD_SHIM_SAMPLE_REFERENCE_NAME) $(TD_SHIM_SAMPLE_REFERENCE_VALUE_FILE)
 
 td-shim: $(TD_SHIM_SAMPLE_REFERENCE_VALUE_FILE) $(TD_SHIM)
 

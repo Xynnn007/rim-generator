@@ -54,5 +54,5 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           token: ${{ secrets.PUSH_TOKEN }}
-          artifacts: "scripts/tdx/final-boot-kernel.bin,scripts/tdx/td-shim.reference-value.sample.json,scripts/tdx/kata-ubuntu-tdx.image,scripts/tdx/kata-ubuntu-tdx.image.reference-value.sample.json,scripts/tdx/bzImage-tdx,scripts/tdx/bzImage-tdx.reference-value.sample.json"
+          artifacts: "scripts/tdx/destdir/*"
           allowUpdates: true
