@@ -24,13 +24,16 @@ GUEST_IMAGE_SAMPLE_REFERENCE_VALUE_FILE := ${ARTIFACT_DIR}/kata-ubuntu-tdx.image
 KERNEL := ${ARTIFACT_DIR}/bzImage-tdx
 KERNEL_SAMPLE_REFERENCE_VALUE_FILE := ${ARTIFACT_DIR}/bzImage-tdx.reference-value.sample.json
 
+$(ARTIFACT_DIR):
+	mkdir $(ARTIFACT_DIR)
+
 $(TD_SHIM_SOURCE_CODE):
 	git clone ${TD_SHIM_GIT_REPO} && cd ${TD_SHIM_REPO_NAME} && \
 	git reset --hard ${TD_SHIM_CODE_REV} && \
     git submodule update --init --recursive
 	touch .td-shim
 
-$(TD_SHIM): $(TD_SHIM_SOURCE_CODE)
+$(TD_SHIM): $(TD_SHIM_SOURCE_CODE) $(ARTIFACT_DIR)
 	cd ${TD_SHIM_REPO_NAME} && \
     make preparation && \
     bash sh_script/build_final.sh boot_kernel
@@ -47,7 +50,7 @@ $(TD_SHIM_RAW_REFERENCE_VALUE_FILE): $(TD_SHIM_SOURCE_CODE) $(TD_SHIM)
 	    cd ..
 	cat tmp | grep -A 1 "MR TD:" | tail -1 > ${TD_SHIM_RAW_REFERENCE_VALUE_FILE}
 
-$(TD_SHIM_SAMPLE_REFERENCE_VALUE_FILE): $(TD_SHIM_RAW_REFERENCE_VALUE_FILE)
+$(TD_SHIM_SAMPLE_REFERENCE_VALUE_FILE): $(TD_SHIM_RAW_REFERENCE_VALUE_FILE) $(ARTIFACT_DIR)
 	python $(TD_SHIM_REPO_NAME).py $(TD_SHIM_RAW_REFERENCE_VALUE_FILE) $(TD_SHIM_SAMPLE_REFERENCE_NAME) $(TD_SHIM_SAMPLE_REFERENCE_VALUE_FILE)
 
 td-shim: $(TD_SHIM_SAMPLE_REFERENCE_VALUE_FILE) $(TD_SHIM)
@@ -58,7 +61,7 @@ $(KATA_SOURCE_CODE):
 		git reset --hard ${KATA_CODE_REV}
 	touch ${KATA_SOURCE_CODE}
 
-$(GUEST_IMAGE) $(GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE) $(KERNEL): $(KATA_SOURCE_CODE)
+$(GUEST_IMAGE) $(GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE) $(KERNEL): $(KATA_SOURCE_CODE) $(ARTIFACT_DIR)
 	cd ${KATA_REPO_NAME} && \
     USE_CACHE=no MEASURED_ROOTFS=yes $(MAKE) rootfs-image-tdx-tarball
 	mv ${KATA_REPO_NAME}/tools/packaging/kata-deploy/local-build/build/rootfs-image-tdx/destdir/opt/kata/share/kata-containers/kata-ubuntu-latest-tdx.image $(GUEST_IMAGE)
@@ -66,11 +69,11 @@ $(GUEST_IMAGE) $(GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE) $(KERNEL): $(KATA_SOURCE_
 	kernel_version=$(shell INSTALL_IN_GOPATH=false $(KATA_REPO_NAME)/ci/install_yq.sh && yq r $(KATA_REPO_NAME)/versions.yaml assets.kernel-tdx-experimental.version); \
 	cp ${KATA_REPO_NAME}/tools/packaging/kata-deploy/local-build/build/kernel-tdx-experimental/destdir/opt/kata/share/kata-containers/vmlinuz-$$kernel_version-$$kernel_config_version-tdx $(KERNEL)
 
-$(GUEST_IMAGE_SAMPLE_REFERENCE_VALUE_FILE): $(GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE)
+$(GUEST_IMAGE_SAMPLE_REFERENCE_VALUE_FILE): $(GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE) $(ARTIFACT_DIR)
 	$(eval REF=$(shell sh -c "cat ${GUEST_IMAGE_RAW_REFERENCE_VALUE_FILE} | grep Root" | awk '{print $$3}'))
 	python guest-image.py ${REF} $(GUEST_IMAGE_SAMPLE_REFERENCE_VALUE_FILE)
 
-$(KERNEL_SAMPLE_REFERENCE_VALUE_FILE): $(KERNEL) $(TD_SHIM_SOURCE_CODE)
+$(KERNEL_SAMPLE_REFERENCE_VALUE_FILE): $(KERNEL) $(TD_SHIM_SOURCE_CODE) $(ARTIFACT_DIR)
 	$(eval SIZE=$(shell sh -c "cat $(TD_SHIM_REPO_NAME)/devtools/td-layout-config/config_memory_linux.json | jq '.memory_regions[4].size'"))
 	python kernel.py $(KERNEL) ${SIZE} $(KERNEL_SAMPLE_REFERENCE_VALUE_FILE)
 
@@ -85,4 +88,5 @@ clean:
 	rm -rf $(TD_SHIM_SOURCE_CODE) $(TD_SHIM_SAMPLE_REFERENCE_VALUE_FILE) \
 		$(TD_SHIM_REPO_NAME) $(KATA_SOURCE_CODE) $(GUEST_IMAGE_SAMPLE_REFERENCE_VALUE_FILE) \
 		$(KATA_REPO_NAME) $(GUEST_IMAGE) \
-		$(KERNEL) $(KERNEL_SAMPLE_REFERENCE_VALUE_FILE)
+		$(KERNEL) $(KERNEL_SAMPLE_REFERENCE_VALUE_FILE) \
+		$(ARTIFACT_DIR)
