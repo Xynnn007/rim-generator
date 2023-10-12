@@ -4,7 +4,6 @@
 
 # Usage: python simple_ref.py <path-to-raw-mrtd-file> <name-of-reference-value> <output-file>
 
-import json
 import sys
 
 sys.path.append('../')

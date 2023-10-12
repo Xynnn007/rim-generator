@@ -4,11 +4,11 @@
 
 # Usage: python simple_ref.py <path-to-raw-mrtd-file> <name-of-reference-value> <output-file>
 
-import base64
-import json
 import sys
 
-import ..lib
+sys.path.append('../')
+
+import lib
 
 def main():
     if len(sys.argv) != 4:
