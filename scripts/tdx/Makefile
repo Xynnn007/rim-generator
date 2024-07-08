@@ -2,7 +2,7 @@ ARTIFACT_DIR := destdir
 
 TD_SHIM_REPO_NAME := td-shim
 TD_SHIM_GIT_REPO := https://github.com/confidential-containers/${TD_SHIM_REPO_NAME}.git
-TD_SHIM_CODE_REV ?= 4da7dfcdd9faabd1bf9a7dc144c0206939b6d383
+TD_SHIM_CODE_REV ?= 7b7a87388a20a525126b5b9b95a003921b0c90e1
 TD_SHIM_SAMPLE_REFERENCE_NAME := tdx.quote.body.mr_td
 
 TD_SHIM := ${ARTIFACT_DIR}/final-boot-kernel.bin
@@ -45,6 +45,7 @@ $(TD_SHIM_RAW_REFERENCE_VALUE_FILE): $(TD_SHIM_SOURCE_CODE) $(TD_SHIM)
       --bin td-shim-tee-info-hash \
       --features tee \
       -- --manifest ../${TD_SHIM_MANIFEST} \
+	  --seperator 0 \
       --image ../${TD_SHIM} \
       --out_bin tee_info.bin 2>../tmp && \
 	    cd ..
